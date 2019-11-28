@@ -4,6 +4,9 @@ import socket
 import sys
 import queue
 
+# list of clients
+list_clients = []
+
 # Create a TCP/IP socket
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setblocking(0)
@@ -30,14 +33,14 @@ while inputs:
 
     # Wait for at least one of the sockets to be
     # ready for processing
-    #print('\nwaiting for the next event', file=sys.stderr)
+    # print('\nwaiting for the next event', file=sys.stderr)
     readable, writable, exceptional = select.select(inputs,
                                                     outputs,
                                                     inputs)
 
     # Handle inputs
     for s in readable:
-
+        print('readable')
         if s is server:
             # A "readable" socket is ready to accept a connection
             connection, client_address = s.accept()
@@ -51,8 +54,9 @@ while inputs:
         else:
             data = s.recv(1024)
             if data:
+                print('first')
                 # A readable client socket has data
-                print('  received {!r} from {}'.format( data, s.getpeername()), file=sys.stderr, )
+                # print('readable  received {!r} from {}'.format( data, s.getpeername()), file=sys.stderr, )
                 message_queues[s].put(data)
                 # Add output channel for response
                 if s not in outputs:
@@ -70,6 +74,7 @@ while inputs:
                 del message_queues[s]
     # Handle outputs
     for s in writable:
+        print('writable2')
         try:
             next_msg = message_queues[s].get_nowait()
         except queue.Empty:
@@ -78,8 +83,16 @@ while inputs:
             print('  ', s.getpeername(), 'queue empty', file=sys.stderr)
             outputs.remove(s)
         else:
-            print('  sending {!r} to {}'.format(next_msg, s.getpeername()), file=sys.stderr)
+#            print('writable  sending {!r} to {}'.format(next_msg, s.getpeername()), file=sys.stderr)
+
+            #send to every client
+            for a in inputs:
+                if a != server:
+                   a.send(next_msg)
+                
             s.send(next_msg)
+ 
+            print('writable4')
             # Handle "exceptional conditions"
     for s in exceptional:
         print('exception condition on', s.getpeername(),

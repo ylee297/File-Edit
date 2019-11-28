@@ -1,7 +1,10 @@
 
 # select_echo_multiclient.py
 import socket
+import threading
 import sys
+
+
 
 server_address = ('localhost', 10000)
 
@@ -13,6 +16,15 @@ print('connecting to {} port {}'.format(*server_address), file=sys.stderr)
 
 sock.connect(server_address)
 
+def filelistener():
+    while True:
+        announcements = sock.recv(1024)
+        print('new announcement: ' + announcements.decode())
+        
+
+
+threading.Thread(target=filelistener, args=()).start()
+
 while True:
     keyboard = input("Type a message\n")
 
@@ -23,7 +35,7 @@ while True:
     sock.send(outgoing_data)
 
     data = sock.recv(1024)
-    print('{}: received {!r}'.format(sock.getsockname(), data), file=sys.stderr)
+    #print('{}: received {!r}'.format(sock.getsockname(), data), file=sys.stderr)
 
 sock.close()
 
