@@ -4,6 +4,7 @@ import socket
 import sys
 import queue
 
+
 # list of clients
 list_clients = []
 
@@ -40,7 +41,7 @@ while inputs:
 
     # Handle inputs
     for s in readable:
-        print('readable')
+        # print('readable')
         if s is server:
             # A "readable" socket is ready to accept a connection
             connection, client_address = s.accept()
@@ -54,10 +55,16 @@ while inputs:
         else:
             data = s.recv(1024)
             if data:
-                print('first')
+                # print('first')
                 # A readable client socket has data
                 # print('readable  received {!r} from {}'.format( data, s.getpeername()), file=sys.stderr, )
+                file = open("client.txt", "ab")
                 message_queues[s].put(data)
+                
+                #print(data.decode())
+                file.write(data)
+
+                file.close()
                 # Add output channel for response
                 if s not in outputs:
                     outputs.append(s)
@@ -74,7 +81,7 @@ while inputs:
                 del message_queues[s]
     # Handle outputs
     for s in writable:
-        print('writable2')
+        # print('writable2')
         try:
             next_msg = message_queues[s].get_nowait()
         except queue.Empty:
@@ -83,16 +90,21 @@ while inputs:
             print('  ', s.getpeername(), 'queue empty', file=sys.stderr)
             outputs.remove(s)
         else:
-#            print('writable  sending {!r} to {}'.format(next_msg, s.getpeername()), file=sys.stderr)
+            #            print('writable  sending {!r} to {}'.format(next_msg, s.getpeername()), file=sys.stderr)
 
-            #send to every client
+            # send to every client
+            file = open("client.txt", "r")
             for a in inputs:
+                str = ''
                 if a != server:
-                   a.send(next_msg)
-                
-            s.send(next_msg)
- 
-            print('writable4')
+                    for line in file:
+                        str += line+'\n'                    
+                    a.send(str.encode())
+
+            #s.send(next_msg)
+            file.close()
+
+            # print('writable4')
             # Handle "exceptional conditions"
     for s in exceptional:
         print('exception condition on', s.getpeername(),

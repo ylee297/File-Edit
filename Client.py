@@ -19,7 +19,9 @@ sock.connect(server_address)
 def filelistener():
     while True:
         announcements = sock.recv(1024)
-        print('new announcement: ' + announcements.decode())
+        localfile = open("localFile.txt", "wb")
+        localfile.write(announcements)
+        localfile.close()
         
 
 
@@ -34,7 +36,7 @@ while True:
     outgoing_data = keyboard.encode()
     sock.send(outgoing_data)
 
-    data = sock.recv(1024)
+    #data = sock.recv(1024)
     #print('{}: received {!r}'.format(sock.getsockname(), data), file=sys.stderr)
 
 sock.close()
