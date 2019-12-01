@@ -27,16 +27,15 @@ server.listen(5)
 # Sockets from which we expect to read
 inputs = [server]
 
-#Second socket. each client has two sockets to the server.
-#So everyone can write while server at the same time server writes out back to the clients
+# Second socket. each client has two sockets to the server.
+# So everyone can write while server at the same time server writes out back to the clients
 secondSocket = []
 
 # Sockets to which we expect to write
 outputs = []
 
 
-
-#second socket 
+# second socket
 
 # Outgoing message queues (socket:Queue)
 message_queues = {}
@@ -59,7 +58,7 @@ while inputs:
             connection, client_address = s.accept()
             print('  connection from', client_address, file=sys.stderr)
             connection.setblocking(0)
-            if( len(inputs)-1 == len(secondSocket)):
+            if(len(inputs)-1 == len(secondSocket)):
                 inputs.append(connection)
             else:
                 secondSocket.append(connection)
@@ -73,7 +72,7 @@ while inputs:
                 # print('first')
                 # A readable client socket has data
                 # print('readable  received {!r} from {}'.format( data, s.getpeername()), file=sys.stderr, )
-                file = open("client.txt", "ab")
+                file = open("globalFile.txt", "ab")
                 message_queues[s].put(data)
 
                 # print(data.decode())
@@ -90,7 +89,13 @@ while inputs:
                 if s in outputs:
                     outputs.remove(s)
                 inputs.remove(s)
+
+                # implies no problem when two clients connect at the same time,
+                # secondSocket is always one index less than the socket
+                secondSocketPosition = inputs.index(s)
+                findSecondSocket = secondSocket[secondSocketPosition-1]
                 s.close()
+                findSecondSocket.close()
 
                 # Remove message queue
                 del message_queues[s]
@@ -107,14 +112,14 @@ while inputs:
         else:
             #            print('writable  sending {!r} to {}'.format(next_msg, s.getpeername()), file=sys.stderr)
 
+
             # send to every client
-            file = open("client.txt", "r")
-            for a in inputs:
+            file = open("globalFile.txt", "r")
+            for out in secondSocket:
                 str = ''
-                if a != server:
-                    for line in file:
-                        str += line+'\n'
-                    a.send(str.encode())
+                for line in file:
+                    str += line+'\n'
+                out.send(str.encode())
 
             # s.send(next_msg)
             file.close()

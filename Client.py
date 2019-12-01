@@ -24,9 +24,11 @@ socketRead.connect(server_address)
 
 def filelistener():
     while True:
-        announcements = sock.recv(1024)
+        #need to set up reading from a buffer
+        #instead of localfile, client needs a copy of the file on server..
+        broadcasted = socketRead.recv(1024)
         localfile = open("localFile.txt", "wb")
-        localfile.write(announcements)
+        localfile.write(broadcasted)
         localfile.close()
         
 
