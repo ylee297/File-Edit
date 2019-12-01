@@ -16,16 +16,27 @@ server.setblocking(0)
 server_address = ('localhost', 10000)
 print('starting up on {} port {}'.format(*server_address),
       file=sys.stderr)
+
 server.bind(server_address)
+
 
 # Listen for incoming connections
 server.listen(5)
 
+
 # Sockets from which we expect to read
 inputs = [server]
 
+#Second socket. each client has two sockets to the server.
+#So everyone can write while server at the same time server writes out back to the clients
+secondSocket = []
+
 # Sockets to which we expect to write
 outputs = []
+
+
+
+#second socket 
 
 # Outgoing message queues (socket:Queue)
 message_queues = {}
@@ -38,16 +49,20 @@ while inputs:
     readable, writable, exceptional = select.select(inputs,
                                                     outputs,
                                                     inputs)
-
     # Handle inputs
     for s in readable:
+        print('readable')
         # print('readable')
         if s is server:
             # A "readable" socket is ready to accept a connection
+            print("two times")
             connection, client_address = s.accept()
             print('  connection from', client_address, file=sys.stderr)
             connection.setblocking(0)
-            inputs.append(connection)
+            if( len(inputs)-1 == len(secondSocket)):
+                inputs.append(connection)
+            else:
+                secondSocket.append(connection)
 
             # Give the connection a queue for data
             # we want to send
@@ -60,8 +75,8 @@ while inputs:
                 # print('readable  received {!r} from {}'.format( data, s.getpeername()), file=sys.stderr, )
                 file = open("client.txt", "ab")
                 message_queues[s].put(data)
-                
-                #print(data.decode())
+
+                # print(data.decode())
                 file.write(data)
 
                 file.close()
@@ -81,7 +96,7 @@ while inputs:
                 del message_queues[s]
     # Handle outputs
     for s in writable:
-        # print('writable2')
+        print('writable2')
         try:
             next_msg = message_queues[s].get_nowait()
         except queue.Empty:
@@ -98,10 +113,10 @@ while inputs:
                 str = ''
                 if a != server:
                     for line in file:
-                        str += line+'\n'                    
+                        str += line+'\n'
                     a.send(str.encode())
 
-            #s.send(next_msg)
+            # s.send(next_msg)
             file.close()
 
             # print('writable4')

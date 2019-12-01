@@ -7,14 +7,20 @@ import sys
 
 
 server_address = ('localhost', 10000)
-
+#socket write
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#socket read only
+socketRead = sockIn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+
+
 # Create a TCP/IP socket
 
 # Connect the socket to the port where the server is listening
 print('connecting to {} port {}'.format(*server_address), file=sys.stderr)
 
 sock.connect(server_address)
+socketRead.connect(server_address)
 
 def filelistener():
     while True:
@@ -24,6 +30,10 @@ def filelistener():
         localfile.close()
         
 
+#open another thread for a second socket.
+#watch files that change
+#send back keystrokes and file changes to the server and havev the server update the main file. then send it all back to the clients
+#or sending back and forth files
 
 threading.Thread(target=filelistener, args=()).start()
 
