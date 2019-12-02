@@ -1,139 +1,76 @@
-# select_echo_server.py
-import select
 import socket
-import sys
-import queue
+import threading
+import time
 
+class Client_Thread(threading.Thread):
+    def __init__(self, name, address, connection, connection2):
+        threading.Thread.__init__(self)
+        self.client_name = 'Client' + str(name)
+        self.address = address
+        # same address
+        self.socketIn = connection
+        self.socketOut = connection2
 
-# list of clients
-list_clients = []
-
-# Create a TCP/IP socket
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setblocking(0)
-
-# Bind the socket to the port
-server_address = ('localhost', 10000)
-print('starting up on {} port {}'.format(*server_address),
-      file=sys.stderr)
-
-server.bind(server_address)
-
-
-# Listen for incoming connections
-server.listen(5)
-
-
-# Sockets from which we expect to read
-inputs = [server]
-
-# Second socket. each client has two sockets to the server.
-# So everyone can write while server at the same time server writes out back to the clients
-secondSocket = []
-
-# Sockets to which we expect to write
-outputs = []
-
-
-# second socket
-
-# Outgoing message queues (socket:Queue)
-message_queues = {}
-
-while inputs:
-
-    # Wait for at least one of the sockets to be
-    # ready for processing
-    # print('\nwaiting for the next event', file=sys.stderr)
-    readable, writable, exceptional = select.select(inputs,
-                                                    outputs,
-                                                    inputs)
-    # Handle inputs
-    for s in readable:
-        print('readable')
-        # print('readable')
-        if s is server:
-            # A "readable" socket is ready to accept a connection
-            print("two times")
-            connection, client_address = s.accept()
-            print('  connection from', client_address, file=sys.stderr)
-            connection.setblocking(0)
-            if(len(inputs)-1 == len(secondSocket)):
-                inputs.append(connection)
-            else:
-                secondSocket.append(connection)
-
-            # Give the connection a queue for data
-            # we want to send
-            message_queues[connection] = queue.Queue()
-        else:
-            data = s.recv(1024)
+    def run(self):
+        print(self.name, " just joined! from ", self.address)
+        data = ''
+        while True:
+            data = self.socketIn.recv(2000)
             if data:
-                # print('first')
-                # A readable client socket has data
-                # print('readable  received {!r} from {}'.format( data, s.getpeername()), file=sys.stderr, )
-                file = open("globalFile.txt", "ab")
-                message_queues[s].put(data)
-
-                # print(data.decode())
-                file.write(data)
-
-                file.close()
-                # Add output channel for response
-                if s not in outputs:
-                    outputs.append(s)
+                print('message from ', self.client_name)
+                print(data.decode())
             else:
-                # Interpret empty result as closed connection
-                print('  closing', client_address, file=sys.stderr)
-                # Stop listening for input on the connection
-                if s in outputs:
-                    outputs.remove(s)
-                inputs.remove(s)
+                break
 
-                # implies no problem when two clients connect at the same time,
-                # secondSocket is always one index less than the socket
-                secondSocketPosition = inputs.index(s)
-                findSecondSocket = secondSocket[secondSocketPosition-1]
-                s.close()
-                findSecondSocket.close()
+        print(self.name, " disconnected from ", self.address)
 
-                # Remove message queue
-                del message_queues[s]
-    # Handle outputs
-    for s in writable:
-        print('writable2')
+
+
+class Server:
+    def __init__(self):
+        self.id = 1
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = ''
+        self.port = 5555
+        #how to fill this buffer
+        self.buffer = []
+        self.list_of_connections = []
+        #threading.Thread(target=self.sendOut, args=()).start()
+
+    
+    # def sendOut(self):
+    #     print('sendOut')
+    #     while True:
+    #         if self.buffer:
+    #             for a in self.list_of_connections:
+    #                 a.socketOut.send("hi".encode())
+    #                 time.sleep(1)
+    
+    
+    def get_list(self):
+        return self.list_of_connections
+
+    def connection_handler(self):
         try:
-            next_msg = message_queues[s].get_nowait()
-        except queue.Empty:
-            # No messages waiting so stop checking
-            # for writability.
-            print('  ', s.getpeername(), 'queue empty', file=sys.stderr)
-            outputs.remove(s)
-        else:
-            #            print('writable  sending {!r} to {}'.format(next_msg, s.getpeername()), file=sys.stderr)
+            self.s.bind((self.server, self.port))
+        except socket.error as e:
+            str(e)
 
 
-            # send to every client
-            file = open("globalFile.txt", "r")
-            for out in secondSocket:
-                str = ''
-                for line in file:
-                    str += line+'\n'
-                out.send(str.encode())
+        self.s.listen()
+        print("Waiting for connection, Server Started")
 
-            # s.send(next_msg)
-            file.close()
+        while True:
+            conn, addr = self.s.accept()
+            print('accept ' + str(addr))
+            conn2, addr2 = self.s.accept()
+            print('accept ' + str(addr2))
+            t = Client_Thread(self.id, addr, conn, conn2)
+            t.start()
+            self.list_of_connections.append(t)
+            self.id += 1
 
-            # print('writable4')
-            # Handle "exceptional conditions"
-    for s in exceptional:
-        print('exception condition on', s.getpeername(),
-              file=sys.stderr)
-        # Stop listening for input on the connection
-        inputs.remove(s)
-        if s in outputs:
-            outputs.remove(s)
-        s.close()
 
-        # Remove message queue
-        del message_queues[s]
+if __name__ == '__main__':
+    server = Server()
+    server.connection_handler()
