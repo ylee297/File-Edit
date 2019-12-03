@@ -1,5 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog
+import socket
+import time
+import threading
 
 
 class Menubar:
@@ -44,7 +47,6 @@ class PyText:
         self.scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.menubar = Menubar(self)
-        self.bind_shortcuts()
 
     def set_window_title(self, name=None):
         if name:
@@ -106,8 +108,26 @@ class PyText:
         self.textarea.bind("<Control-o>", self.open_file)
         self.textarea.bind("<Control-S>", self.save_as)
 
+    def watch(self):
+        # Creates instance of 'Socket'
+        s = socket.socket()
+
+        hostname = "Ivans-MacBook-Pro.local"  # Server IP/Hostname
+        port = 8000  # Server Port
+
+        s.connect((hostname, port))  # Connects to server
+
+        while True:
+            content = self.textarea.get(1.0, tk.END)  # Gets the message to be
+            bytes = content.encode(encoding="UTF-8")
+            s.send(bytes)  # Encodes and sends message (x)
+            print(bytes)
+            time.sleep(0.1)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
     pt = PyText(root)
+    saver = threading.Thread(target=pt.watch)
+    saver.start()
     root.mainloop()
