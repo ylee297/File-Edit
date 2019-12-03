@@ -1,7 +1,7 @@
 import socket
 import threading
 import time
-import pytext as pt
+from pyeditor import PyText
 import tkinter as tk
 
 editor = None
@@ -17,8 +17,6 @@ class Client_Thread(threading.Thread):
         self.row = str(name) + ".0"
         self.id = name
         # self.socketOut = connection2
-
-        # self.editor = editor
 
     def run(self):
         global editor
@@ -89,7 +87,7 @@ class Server:
 if __name__ == "__main__":
     # global editor
     root = tk.Tk()
-    editor = pt.PyText(root)
+    editor = PyText(root)
     server = Server()
     # server.connection_handler()
     threading.Thread(target=server.connection_handler).start()
